@@ -86,7 +86,37 @@ function toggleTech(id) {
 
 function setupEventListeners() {
     const toggleBtn = document.getElementById('togglePreview');
+    const toggleDarkBtn = document.getElementById('toggleDarkMode');
     const skillsSearch = document.getElementById('skillsSearch');
+
+    // Initialize dark mode from localStorage
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+        document.body.setAttribute('data-theme', 'dark');
+    } else {
+        document.body.classList.remove('dark-mode');
+        document.body.setAttribute('data-theme', 'light');
+    }
+
+    // Dark mode toggle
+    if (toggleDarkBtn) {
+        toggleDarkBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isDark = document.body.classList.toggle('dark-mode');
+            
+            // Also set data attribute
+            if (isDark) {
+                document.body.setAttribute('data-theme', 'dark');
+                localStorage.setItem('darkMode', 'true');
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                localStorage.setItem('darkMode', 'false');
+            }
+        });
+    }
 
     const basicInputs = ['name', 'tagline', 'aboutme', 'work_project', 'work_link', 'collab_project', 'collab_link', 'help_project', 'help_link', 'learning', 'askme', 'reachme', 'projects_url', 'blog_url', 'resume_url', 'funfact', 'github', 'theme'];
     basicInputs.forEach(id => {
