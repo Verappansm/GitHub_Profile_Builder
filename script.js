@@ -32,7 +32,7 @@ let state = {
         codeforces: '', hackerrank: '', discord: '', quora: ''
     },
     socialStyle: 'badges',
-    selectedTech: new Set(),
+    selectedTech: [],
     activeTab: 'preview',
     searchQuery: ''
 };
@@ -46,17 +46,36 @@ function init() {
 function renderTechStack() {
     const container = document.getElementById('techStackContainer');
     container.innerHTML = '';
+    renderSelectedTechBar();
     const categories = [...new Set(TECH_STACK.map(item => item.category))];
     categories.forEach(cat => {
         const filteredTech = TECH_STACK.filter(tech => tech.category === cat && tech.name.toLowerCase().includes(state.searchQuery.toLowerCase()));
         if (filteredTech.length === 0) return;
+        const catIds = filteredTech.map(t => t.id);
+        const allSelected = catIds.every(id => state.selectedTech.includes(id));
         const catSection = document.createElement('div');
         catSection.className = 'tech-category';
-        catSection.innerHTML = `<h3>${cat}</h3><div class="tech-grid"></div>`;
+        catSection.innerHTML = `
+            <div class="tech-category-header">
+                <h3>${cat}</h3>
+                <div class="tech-category-actions">
+                    <button type="button" data-action="select-all">${allSelected ? '✓ All' : 'Select All'}</button>
+                    <button type="button" data-action="clear-all">Clear</button>
+                </div>
+            </div>
+            <div class="tech-grid"></div>`;
+        catSection.querySelector('[data-action="select-all"]').onclick = () => {
+            catIds.forEach(id => { if (!state.selectedTech.includes(id)) state.selectedTech.push(id); });
+            renderTechStack(); updateOutput();
+        };
+        catSection.querySelector('[data-action="clear-all"]').onclick = () => {
+            state.selectedTech = state.selectedTech.filter(id => !catIds.includes(id));
+            renderTechStack(); updateOutput();
+        };
         const grid = catSection.querySelector('.tech-grid');
         filteredTech.forEach(tech => {
             const item = document.createElement('div');
-            item.className = `tech-item ${state.selectedTech.has(tech.id) ? 'selected' : ''}`;
+            item.className = `tech-item ${state.selectedTech.includes(tech.id) ? 'selected' : ''}`;
 
             let iconUrl = tech.customIconUrl;
             if (!iconUrl) {
@@ -78,15 +97,46 @@ function renderTechStack() {
 }
 
 function toggleTech(id) {
-    if (state.selectedTech.has(id)) state.selectedTech.delete(id);
-    else state.selectedTech.add(id);
+    const idx = state.selectedTech.indexOf(id);
+    if (idx !== -1) state.selectedTech.splice(idx, 1);
+    else state.selectedTech.push(id);
     renderTechStack();
     updateOutput();
 }
 
 function setupEventListeners() {
     const toggleBtn = document.getElementById('togglePreview');
+    const toggleDarkBtn = document.getElementById('toggleDarkMode');
     const skillsSearch = document.getElementById('skillsSearch');
+
+    // Initialize dark mode from localStorage
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+        document.body.setAttribute('data-theme', 'dark');
+    } else {
+        document.body.classList.remove('dark-mode');
+        document.body.setAttribute('data-theme', 'light');
+    }
+
+    // Dark mode toggle
+    if (toggleDarkBtn) {
+        toggleDarkBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isDark = document.body.classList.toggle('dark-mode');
+            
+            // Also set data attribute
+            if (isDark) {
+                document.body.setAttribute('data-theme', 'dark');
+                localStorage.setItem('darkMode', 'true');
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                localStorage.setItem('darkMode', 'false');
+            }
+        });
+    }
 
     const basicInputs = ['name', 'tagline', 'aboutme', 'work_project', 'work_link', 'collab_project', 'collab_link', 'help_project', 'help_link', 'learning', 'askme', 'reachme', 'projects_url', 'blog_url', 'resume_url', 'funfact', 'github', 'theme'];
     basicInputs.forEach(id => {
@@ -233,7 +283,7 @@ function generateMarkdown() {
     if (state.funfact) aboutMd += `\n - ⚡ Fun fact **${state.funfact}**\n`;
     if (aboutMd) md += aboutMd + '\n';
 
-    if (state.selectedTech.size > 0) {
+    if (state.selectedTech.length > 0) {
         md += `\n\n<h3 align="left">Languages and Tools:</h3>\n\n<p align="left"> `;
         state.selectedTech.forEach(id => {
             const tech = TECH_STACK.find(t => t.id === id);
@@ -363,5 +413,465 @@ function updateOutput() {
     const previewPane = document.getElementById('previewPane');
     if (previewPane) previewPane.innerHTML = html;
 }
+
+// ===== NEW FEATURES =====
+
+// Notification System
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// Progress Indicator
+function updateProgress() {
+    let filled = 0;
+    let total = 0;
+    const inputs = document.querySelectorAll('input, textarea, select');
+    inputs.forEach(input => {
+        total++;
+        if (input.type === 'checkbox') {
+            if (input.checked) filled++;
+        } else if (input.value.trim() !== '') {
+            filled++;
+        }
+    });
+    const percentage = Math.round((filled / total) * 100);
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    if (progressFill) progressFill.style.width = percentage + '%';
+    if (progressText) progressText.textContent = percentage + '% Complete';
+}
+
+// Collapsible Sections
+function setupCollapsibleSections() {
+    const collapseBtns = document.querySelectorAll('.collapse-btn');
+    collapseBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = btn.closest('.config-section');
+            const content = section.querySelector('.section-content');
+            const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+            btn.setAttribute('aria-expanded', !isExpanded);
+            content.classList.toggle('collapsed');
+        });
+    });
+}
+
+// Section Navigation
+function setupSectionNav() {
+    const navItems = document.querySelectorAll('.nav-item-inline');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            navItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            const section = document.getElementById(item.dataset.section);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    });
+}
+
+// Copy to Clipboard
+function setupCopyButton() {
+    const copyBtn = document.getElementById('copyBtn');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+            const markdown = document.getElementById('markdownOutput').textContent;
+            navigator.clipboard.writeText(markdown)
+                .then(() => showNotification('Markdown copied to clipboard!'))
+                .catch(() => showNotification('Failed to copy', 'error'));
+        });
+    }
+}
+
+// Download as File
+function setupDownloadButton() {
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            const markdown = document.getElementById('markdownOutput').textContent;
+            const blob = new Blob([markdown], { type: 'text/markdown' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'README.md';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            showNotification('README.md downloaded!');
+        });
+    }
+}
+
+// Reset Button
+function setupResetButton() {
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset all fields?')) {
+                document.getElementById('readmeForm').reset();
+                state.selectedTech = [];
+                renderTechStack();
+                updateOutput();
+                updateProgress();
+                localStorage.removeItem('readmeGenerator');
+                showNotification('All fields cleared!');
+            }
+        });
+    }
+}
+
+// Templates
+const TEMPLATES = {
+    frontend: {
+        name: 'John Doe',
+        tagline: 'Passionate Frontend Developer 💻',
+        aboutme: 'I create beautiful and responsive web interfaces.',
+        learning: 'React, Next.js, TypeScript',
+        askme: 'React, Vue, CSS, JavaScript',
+        reachme: 'john@example.com'
+    },
+    fullstack: {
+        name: 'Jane Developer',
+        tagline: 'Full Stack Developer ⚡',
+        aboutme: 'Building end-to-end web solutions.',
+        learning: 'Node.js, Docker, Kubernetes',
+        askme: 'JavaScript, Python, Docker',
+        reachme: 'jane@example.com'
+    },
+    datascience: {
+        name: 'Data Scientist',
+        tagline: 'Data Science & ML Engineer 📊',
+        aboutme: 'Turning data into insights.',
+        learning: 'TensorFlow, PyTorch, sklearn',
+        askme: 'Python, ML, Data Analysis',
+        reachme: 'ds@example.com'
+    },
+    devops: {
+        name: 'DevOps Engineer',
+        tagline: 'Cloud & Infrastructure Expert 🏗️',
+        aboutme: 'Building scalable infrastructure.',
+        learning: 'Kubernetes, AWS, Terraform',
+        askme: 'Docker, CI/CD, AWS',
+        reachme: 'devops@example.com'
+    },
+    designer: {
+        name: 'UI/UX Designer',
+        tagline: 'Creative Designer 🎨',
+        aboutme: 'Designing beautiful user experiences.',
+        learning: 'Figma, Design Systems, Animation',
+        askme: 'UI Design, UX, Prototyping',
+        reachme: 'designer@example.com'
+    }
+};
+
+function setupTemplates() {
+    const templatesBtn = document.getElementById('templatesBtn');
+    const templatesModal = document.getElementById('templatesModal');
+    const templateBtns = document.querySelectorAll('.template-btn');
+    const modalClose = document.querySelector('.modal-close');
+
+    if (templatesBtn) {
+        templatesBtn.addEventListener('click', () => {
+            templatesModal.style.display = 'flex';
+        });
+    }
+
+    if (modalClose) {
+        modalClose.addEventListener('click', () => {
+            templatesModal.style.display = 'none';
+        });
+    }
+
+    templatesModal.addEventListener('click', (e) => {
+        if (e.target === templatesModal) {
+            templatesModal.style.display = 'none';
+        }
+    });
+
+    templateBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const template = btn.dataset.template;
+            if (template === 'clear') {
+                document.getElementById('readmeForm').reset();
+                state.selectedTech = [];
+            } else {
+                const data = TEMPLATES[template];
+                Object.keys(data).forEach(key => {
+                    const el = document.getElementById(key);
+                    if (el) el.value = data[key];
+                    state[key] = data[key];
+                });
+                renderTechStack();
+            }
+            updateOutput();
+            updateProgress();
+            templatesModal.style.display = 'none';
+            showNotification('Template loaded!');
+        });
+    });
+}
+
+// Auto-save to localStorage
+function autoSave() {
+    const data = {
+        state: {
+            name: state.name,
+            tagline: state.tagline,
+            aboutme: state.aboutme,
+            work_project: state.work_project,
+            work_link: state.work_link,
+            collab_project: state.collab_project,
+            collab_link: state.collab_link,
+            help_project: state.help_project,
+            help_link: state.help_link,
+            learning: state.learning,
+            askme: state.askme,
+            reachme: state.reachme,
+            projects_url: state.projects_url,
+            blog_url: state.blog_url,
+            resume_url: state.resume_url,
+            funfact: state.funfact,
+            github: state.github,
+            theme: state.theme,
+            socialStyle: state.socialStyle,
+            stats: state.stats,
+            addons: state.addons,
+            socials: state.socials,
+            selectedTech: [...state.selectedTech]
+        }
+    };
+    localStorage.setItem('readmeGenerator', JSON.stringify(data));
+}
+
+// Load from localStorage
+function loadSavedData() {
+    const saved = localStorage.getItem('readmeGenerator');
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            Object.assign(state, data.state);
+            state.selectedTech = data.state.selectedTech || [];
+            // Populate form
+            Object.keys(data.state).forEach(key => {
+                if (key !== 'selectedTech' && key !== 'stats' && key !== 'addons' && key !== 'socials') {
+                    const el = document.getElementById(key);
+                    if (el) el.value = data.state[key];
+                }
+            });
+            Object.keys(data.state.stats || {}).forEach(key => {
+                const el = document.getElementById(key === 'profile' ? 'profile_stats' : key === 'topLang' ? 'top_lang' : 'streak');
+                if (el) el.checked = data.state.stats[key];
+            });
+            Object.keys(data.state.socials || {}).forEach(key => {
+                const el = document.getElementById(key);
+                if (el) el.value = data.state.socials[key];
+            });
+        } catch (e) {
+            console.error('Failed to load saved data');
+        }
+    }
+}
+
+// Keyboard Shortcuts
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === 'c' && e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('copyBtn').click();
+            } else if (e.key === 's') {
+                e.preventDefault();
+                autoSave();
+                showNotification('Manually saved!');
+            }
+        }
+    });
+}
+
+// Split View
+function setupSplitView() {
+    const splitCheckbox = document.getElementById('splitView');
+    if (splitCheckbox) {
+        splitCheckbox.addEventListener('change', () => {
+            document.body.classList.toggle('split-view');
+            const app = document.getElementById('app');
+            if (document.body.classList.contains('split-view')) {
+                app.classList.remove('preview-hidden');
+                splitCheckbox.checked = true;
+            }
+        });
+    }
+}
+
+// Initialize new features in setupEventListeners
+const originalSetupEventListeners = setupEventListeners;
+setupEventListeners = function() {
+    originalSetupEventListeners.call(this);
+    setupCollapsibleSections();
+    setupSectionNav();
+    setupCopyButton();
+    setupDownloadButton();
+    setupResetButton();
+    setupTemplates();
+    setupKeyboardShortcuts();
+    setupSplitView();
+    loadSavedData();
+    updateProgress();
+    const form = document.getElementById('readmeForm');
+    if (form) {
+        form.addEventListener('change', updateProgress);
+        form.addEventListener('input', () => {
+            updateProgress();
+            autoSave();
+        });
+    }
+};
+
+// ===== QUICK WIN FEATURES =====
+
+// Selected Tech Reorder Bar
+function renderSelectedTechBar() {
+    const bar = document.getElementById('selectedTechBar');
+    const list = document.getElementById('selectedTechList');
+    if (!bar || !list) return;
+
+    if (state.selectedTech.length === 0) {
+        bar.style.display = 'none';
+        return;
+    }
+    bar.style.display = 'block';
+    list.innerHTML = '';
+
+    state.selectedTech.forEach((id, index) => {
+        const tech = TECH_STACK.find(t => t.id === id);
+        if (!tech) return;
+        const chip = document.createElement('span');
+        chip.className = 'selected-tech-chip';
+        chip.draggable = true;
+        chip.dataset.index = index;
+
+        let iconUrl = tech.customIconUrl;
+        if (!iconUrl) {
+            if (tech.id === 'amazonaws') iconUrl = 'https://cdn.simpleicons.org/amazonwebservices/white';
+            else if (tech.id === 'django') iconUrl = 'https://cdn.simpleicons.org/django/white';
+            else iconUrl = `https://raw.githubusercontent.com/devicons/devicon/master/icons/${tech.icon}/${tech.icon}-original.svg`;
+        }
+
+        chip.innerHTML = `<img src="${iconUrl}" alt="${tech.name}">${tech.name}<span class="chip-remove">&times;</span>`;
+
+        chip.querySelector('.chip-remove').onclick = (e) => {
+            e.stopPropagation();
+            state.selectedTech.splice(index, 1);
+            renderTechStack();
+            updateOutput();
+        };
+
+        chip.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', index);
+            chip.style.opacity = '0.5';
+        });
+        chip.addEventListener('dragend', () => { chip.style.opacity = '1'; });
+        chip.addEventListener('dragover', (e) => { e.preventDefault(); chip.classList.add('drag-over'); });
+        chip.addEventListener('dragleave', () => { chip.classList.remove('drag-over'); });
+        chip.addEventListener('drop', (e) => {
+            e.preventDefault();
+            chip.classList.remove('drag-over');
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIndex = index;
+            if (fromIndex === toIndex) return;
+            const [moved] = state.selectedTech.splice(fromIndex, 1);
+            state.selectedTech.splice(toIndex, 0, moved);
+            renderTechStack();
+            updateOutput();
+        });
+
+        list.appendChild(chip);
+    });
+}
+
+// Character Counters
+function setupCharCounters() {
+    const fields = [
+        { id: 'name', max: 50 },
+        { id: 'tagline', max: 100 },
+        { id: 'aboutme', max: 500 }
+    ];
+    fields.forEach(({ id, max }) => {
+        const input = document.getElementById(id);
+        const counter = document.getElementById(`${id}-counter`);
+        if (!input || !counter) return;
+        function update() {
+            const len = input.value.length;
+            counter.textContent = `${len} / ${max}`;
+            counter.classList.remove('warning', 'limit');
+            if (len >= max) counter.classList.add('limit');
+            else if (len >= max * 0.8) counter.classList.add('warning');
+        }
+        input.addEventListener('input', update);
+        update();
+    });
+}
+
+// Scroll to Top + translucent header/info-row
+function setupScrollToTop() {
+    const btn = document.getElementById('scrollTopBtn');
+    const form = document.getElementById('readmeForm');
+    const topHeader = document.querySelector('.top-header');
+    const infoRow = document.querySelector('.info-row');
+    if (!btn || !form) return;
+
+    form.addEventListener('scroll', () => {
+        const scrolled = form.scrollTop > 100;
+        if (topHeader) topHeader.classList.toggle('scrolled', scrolled);
+        if (infoRow) infoRow.classList.toggle('scrolled', scrolled);
+
+        if (form.scrollTop > 300) {
+            btn.style.display = 'flex';
+            requestAnimationFrame(() => btn.classList.add('visible'));
+        } else {
+            btn.classList.remove('visible');
+            setTimeout(() => { if (!btn.classList.contains('visible')) btn.style.display = 'none'; }, 300);
+        }
+    });
+
+    btn.addEventListener('click', () => {
+        form.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
+
+// Auto-save Toast
+let autosaveToast = null;
+function showAutosaveToast() {
+    if (!autosaveToast) {
+        autosaveToast = document.createElement('div');
+        autosaveToast.className = 'autosave-toast';
+        autosaveToast.textContent = 'Draft saved';
+        document.body.appendChild(autosaveToast);
+    }
+    autosaveToast.classList.add('show');
+    clearTimeout(autosaveToast._hideTimer);
+    autosaveToast._hideTimer = setTimeout(() => autosaveToast.classList.remove('show'), 1500);
+}
+
+// Patch autoSave to show toast
+const _originalAutoSave = autoSave;
+autoSave = function() {
+    _originalAutoSave();
+    showAutosaveToast();
+};
+
+// Wire up new features after DOM ready
+const _originalInit = init;
+init = function() {
+    _originalInit();
+    setupCharCounters();
+    setupScrollToTop();
+};
 
 init();
