@@ -14,7 +14,11 @@ let state = {
     funfact: '',
     github: '',
     theme: 'tokyonight',
-    stats: { profile: true, topLang: true, streak: true },
+    stats: { profile: true, topLang: true, streak: true, activityGraph: false },
+    hideBorder: false,
+    countPrivate: false,
+    wakatimeUsername: '',
+    builtWithBadge: false,
     addons: {
         visitors: false,
         trophy: false,
@@ -138,19 +142,23 @@ function setupEventListeners() {
         });
     }
 
-    const basicInputs = ['name', 'tagline', 'aboutme', 'work_project', 'work_link', 'collab_project', 'collab_link', 'help_project', 'help_link', 'learning', 'askme', 'reachme', 'projects_url', 'blog_url', 'resume_url', 'funfact', 'github', 'theme'];
+    const basicInputs = ['name', 'tagline', 'aboutme', 'work_project', 'work_link', 'collab_project', 'collab_link', 'help_project', 'help_link', 'learning', 'askme', 'reachme', 'projects_url', 'blog_url', 'resume_url', 'funfact', 'github', 'theme', 'wakatimeUsername'];
     basicInputs.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', (e) => { state[id] = e.target.value; updateOutput(); });
     });
 
-    const checkboxes = ['profile_stats', 'top_lang', 'streak'];
+    const checkboxes = ['profile_stats', 'top_lang', 'streak', 'activity_graph', 'hide_border', 'count_private', 'built_with_badge'];
     checkboxes.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', (e) => {
             if (id === 'profile_stats') state.stats.profile = e.target.checked;
             if (id === 'top_lang') state.stats.topLang = e.target.checked;
             if (id === 'streak') state.stats.streak = e.target.checked;
+            if (id === 'activity_graph') state.stats.activityGraph = e.target.checked;
+            if (id === 'hide_border') state.hideBorder = e.target.checked;
+            if (id === 'count_private') state.countPrivate = e.target.checked;
+            if (id === 'built_with_badge') state.builtWithBadge = e.target.checked;
             updateOutput();
         });
     });
@@ -249,18 +257,13 @@ function setupEventListeners() {
         });
     });
 
-    const copyBtn = document.getElementById('copyBtn');
-    if (copyBtn) copyBtn.addEventListener('click', () => {
-        const code = generateMarkdown();
-        navigator.clipboard.writeText(code);
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => copyBtn.textContent = 'Copy Code', 2000);
-    });
+    const form = document.getElementById('readmeForm');
+    if (form) form.addEventListener('submit', (e) => e.preventDefault());
 }
 
 function generateMarkdown() {
     let md = `# Hi 👋, I'm ${state.name || 'Your Name'}\n`;
-    md += `\n<h4>${state.tagline || 'A passionate developer from India'}</h4>\n\n`;
+    if (state.tagline) md += `\n<h4>${state.tagline}</h4>\n\n`;
 
     if (state.aboutme) {
         md += `\n${state.aboutme}\n\n`;
@@ -299,7 +302,7 @@ function generateMarkdown() {
                     }
                 }
                 const link = tech.link || '#';
-                md += `<a href="${link}" target="_blank" rel="noreferrer"><img src="${iconUrl}" onerror="this.src='https://cdn.simpleicons.org/${tech.id}/white'" alt="${tech.id}" title="${tech.name}" width="40" height="40"/></a>`;
+                md += `<a href="${link}" target="_blank" rel="noreferrer"><img src="${iconUrl}" alt="${tech.id}" title="${tech.name}" width="40" height="40"/></a>`;
             }
         });
         md += `</p>\n\n`;
@@ -335,11 +338,23 @@ function generateMarkdown() {
         if (state.addons.trophy) {
             statsMd += `<p align="left"><a href="https://github.com/ryo-ma/github-profile-trophy"><img src="https://github-profile-trophy.vercel.app/?username=${state.github}&theme=${state.theme}" alt="${state.github}" /></a></p>\n\n`;
         }
-        if (state.stats.topLang) statsMd += `<p align="left"><img src="https://github-readme-stats.zcy.dev/api/top-langs?username=${state.github}&show_icons=true&locale=en&layout=compact&theme=${state.theme}" alt="${state.github}" /></p>\n\n`;
-        if (state.stats.profile) statsMd += `<p align="left"><img src="https://github-readme-stats.zcy.dev/api?username=${state.github}&show_icons=true&theme=${state.theme}" alt="${state.github}" /></p>\n\n`;
-        if (state.stats.streak) statsMd += `<p align="left"><img src="https://github-readme-streak-stats.herokuapp.com/?user=${state.github}&theme=${state.theme}" alt="${state.github}" /></p>\n\n`;
+        const hideBorder = state.hideBorder ? '&hide_border=true' : '';
+        const countPrivate = state.countPrivate ? '&count_private=true' : '';
+        if (state.stats.topLang) statsMd += `<p align="left"><img src="https://github-readme-stats.vercel.app/api/top-langs?username=${state.github}&layout=compact&langs_count=8&theme=${state.theme}${hideBorder}" alt="${state.github}" /></p>\n\n`;
+        if (state.stats.profile) statsMd += `<p align="left"><img src="https://github-readme-stats.vercel.app/api?username=${state.github}&show_icons=true&theme=${state.theme}${hideBorder}${countPrivate}" alt="${state.github}" /></p>\n\n`;
+        if (state.stats.streak) statsMd += `<p align="left"><img src="https://streak-stats.demolab.com/?user=${state.github}&theme=${state.theme}${hideBorder}" alt="${state.github}" /></p>\n\n`;
+        if (state.stats.activityGraph) statsMd += `<p align="left"><img src="https://github-readme-activity-graph.vercel.app/graph?username=${state.github}&theme=${state.theme}${hideBorder}" alt="${state.github}" /></p>\n\n`;
 
         if (statsMd) md += `\n\n` + statsMd;
+    }
+
+    if (state.wakatimeUsername) {
+        md += `\n\n<h3 align="left">⏱️ Weekly Dev Breakdown:</h3>\n\n`;
+        md += `<p align="left"><img src="https://github-readme-stats.vercel.app/api/wakatime?username=${state.wakatimeUsername}&layout=compact&theme=${state.theme || 'tokyonight'}" alt="${state.wakatimeUsername}" /></p>\n\n`;
+    }
+
+    if (state.builtWithBadge) {
+        md += `\n\n---\n\n<p align="left"><a href="https://github.com/Verappansm/GitHub_Profile_Builder"><img src="https://img.shields.io/badge/Made%20with-README%20Pro-0366d6?style=flat-square&logo=github&logoColor=white" alt="Made with README Pro" /></a></p>\n`;
     }
 
     return md;
@@ -383,9 +398,9 @@ function renderSocialLink(platform, user) {
         const iconUrl = platform === 'linkedin'
             ? 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg'
             : `https://cdn.simpleicons.org/${logo}/${color}`;
-        return `<a href="${url}" target="blank"><img src="${iconUrl}" alt="${platform}" title="${platform}" height="40" width="40" /></a>&nbsp;`;
+        return `<a href="${url}" target="_blank"><img src="${iconUrl}" alt="${platform}" title="${platform}" height="40" width="40" /></a>&nbsp;`;
     } else {
-        return `<a href="${url}" target="blank"><img src="https://img.shields.io/badge/${platform}-%23${color}.svg?style=for-the-badge&logo=${logo}&logoColor=white" alt="${platform}" /></a>&nbsp;`;
+        return `<a href="${url}" target="_blank"><img src="https://img.shields.io/badge/${platform}-%23${color}.svg?style=for-the-badge&logo=${logo}&logoColor=white" alt="${platform}" /></a>&nbsp;`;
     }
 }
 
@@ -394,24 +409,10 @@ function updateOutput() {
     const codePane = document.getElementById('markdownOutput');
     if (codePane) codePane.textContent = md;
 
-    // Better preview rendering to mimic GitHub spacing
-    let html = md
-        .replace(/#### (.*)/g, '<h4>$1</h4>')
-        .replace(/### (.*)/g, '<h3>$1</h3>')
-        .replace(/## (.*)/g, '<h2>$1</h2>')
-        .replace(/# (.*)/g, '<h1>$1</h1>')
-        .replace(/\n\n\n/g, '<p style="margin-bottom: 32px;"></p>') // Handle triple newlines as large gaps
-        .replace(/\n\n/g, '<p></p>')
-        .replace(/\n/g, '<br>')
-        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-    // Clean up produced fragments
-    html = html.replace(/<a(.*?)><br>/g, '<a$1>')
-        .replace(/<br><\/a>/g, '</a>');
-
     const previewPane = document.getElementById('previewPane');
-    if (previewPane) previewPane.innerHTML = html;
+    if (previewPane) {
+        previewPane.innerHTML = marked.parse(md, { gfm: true, breaks: false });
+    }
 }
 
 // ===== NEW FEATURES =====
@@ -425,19 +426,25 @@ function showNotification(message, type = 'success') {
     setTimeout(() => notification.remove(), 3000);
 }
 
-// Progress Indicator
+// Progress Indicator — only counts fields that actually appear in the README
 function updateProgress() {
+    const textFields = [
+        'name', 'tagline', 'aboutme', 'github',
+        'work_project', 'learning', 'collab_project', 'help_project',
+        'askme', 'reachme', 'projects_url', 'blog_url', 'resume_url', 'funfact'
+    ];
+
     let filled = 0;
-    let total = 0;
-    const inputs = document.querySelectorAll('input, textarea, select');
-    inputs.forEach(input => {
-        total++;
-        if (input.type === 'checkbox') {
-            if (input.checked) filled++;
-        } else if (input.value.trim() !== '') {
-            filled++;
-        }
+    const total = textFields.length + 2; // +2: tech stack section + socials section
+
+    textFields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.value.trim() !== '') filled++;
     });
+
+    if (state.selectedTech.length > 0) filled++;
+    if (Object.values(state.socials).some(v => v && v.trim() !== '')) filled++;
+
     const percentage = Math.round((filled / total) * 100);
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
@@ -515,7 +522,20 @@ function setupResetButton() {
         resetBtn.addEventListener('click', () => {
             if (confirm('Are you sure you want to reset all fields?')) {
                 document.getElementById('readmeForm').reset();
-                state.selectedTech = [];
+                const blankState = {
+                    name: '', tagline: '', aboutme: '',
+                    work_project: '', work_link: '', collab_project: '', collab_link: '',
+                    help_project: '', help_link: '', learning: '', askme: '', reachme: '',
+                    projects_url: '', blog_url: '', resume_url: '', funfact: '',
+                    github: '', theme: 'tokyonight',
+                    stats: { profile: true, topLang: true, streak: true, activityGraph: false },
+                    hideBorder: false, countPrivate: false, wakatimeUsername: '', builtWithBadge: false,
+                    addons: { visitors: false, trophy: false, stats: false, skills: false, streak: false, twitter: false, blog_devto: false, blog_medium: false },
+                    socials: { twitter: '', linkedin: '', instagram: '', youtube: '', stackoverflow: '', medium: '', kaggle: '', leetcode: '', codechef: '', codeforces: '', hackerrank: '', discord: '', quora: '' },
+                    socialStyle: 'badges',
+                    selectedTech: []
+                };
+                Object.assign(state, blankState);
                 renderTechStack();
                 updateOutput();
                 updateProgress();
@@ -529,44 +549,92 @@ function setupResetButton() {
 // Templates
 const TEMPLATES = {
     frontend: {
-        name: 'John Doe',
+        name: 'Your Name',
         tagline: 'Passionate Frontend Developer 💻',
-        aboutme: 'I create beautiful and responsive web interfaces.',
+        aboutme: 'I craft beautiful, fast, and accessible web interfaces. Obsessed with clean UI and great UX.',
         learning: 'React, Next.js, TypeScript',
-        askme: 'React, Vue, CSS, JavaScript',
-        reachme: 'john@example.com'
+        askme: 'React, Vue, CSS, JavaScript, animations',
+        funfact: 'I debug with console.log and I\'m not ashamed'
     },
     fullstack: {
-        name: 'Jane Developer',
+        name: 'Your Name',
         tagline: 'Full Stack Developer ⚡',
-        aboutme: 'Building end-to-end web solutions.',
-        learning: 'Node.js, Docker, Kubernetes',
-        askme: 'JavaScript, Python, Docker',
-        reachme: 'jane@example.com'
+        aboutme: 'Building end-to-end web solutions from database to deployment. I like shipping things that work.',
+        learning: 'System Design, Microservices, GraphQL',
+        askme: 'JavaScript, Python, REST APIs, Docker',
+        funfact: 'I have more browser tabs open than lines of code'
+    },
+    backend: {
+        name: 'Your Name',
+        tagline: 'Backend Engineer & API Architect 🔧',
+        aboutme: 'I design and build scalable backend systems, APIs, and microservices. Performance and reliability first.',
+        learning: 'Distributed systems, gRPC, Kafka',
+        askme: 'Node.js, Python, PostgreSQL, Redis, System Design',
+        funfact: 'The best UI is no UI — just a clean API'
     },
     datascience: {
-        name: 'Data Scientist',
-        tagline: 'Data Science & ML Engineer 📊',
-        aboutme: 'Turning data into insights.',
-        learning: 'TensorFlow, PyTorch, sklearn',
-        askme: 'Python, ML, Data Analysis',
-        reachme: 'ds@example.com'
+        name: 'Your Name',
+        tagline: 'Data Scientist & ML Engineer 📊',
+        aboutme: 'Turning raw data into actionable insights and intelligent systems. I make machines learn things.',
+        learning: 'LLMs, Transformer architectures, MLOps',
+        askme: 'Python, ML, Data Analysis, TensorFlow, PyTorch',
+        funfact: 'My models overfit just like my coffee preferences'
     },
     devops: {
-        name: 'DevOps Engineer',
-        tagline: 'Cloud & Infrastructure Expert 🏗️',
-        aboutme: 'Building scalable infrastructure.',
-        learning: 'Kubernetes, AWS, Terraform',
-        askme: 'Docker, CI/CD, AWS',
-        reachme: 'devops@example.com'
+        name: 'Your Name',
+        tagline: 'DevOps & Cloud Infrastructure Engineer 🏗️',
+        aboutme: 'Building reliable, scalable infrastructure. I automate everything that can be automated.',
+        learning: 'Kubernetes, Terraform, eBPF, Platform Engineering',
+        askme: 'Docker, CI/CD, AWS, GCP, Azure, Linux',
+        funfact: 'It works on my machine — so I containerized my machine'
+    },
+    mobile: {
+        name: 'Your Name',
+        tagline: 'Mobile Developer — iOS & Android 📱',
+        aboutme: 'Building smooth, native-feeling mobile experiences for iOS and Android. Apps people actually enjoy using.',
+        learning: 'SwiftUI, Jetpack Compose, Flutter performance',
+        askme: 'React Native, Flutter, Swift, Kotlin',
+        funfact: 'I test on real devices, not just simulators'
+    },
+    gamedev: {
+        name: 'Your Name',
+        tagline: 'Indie Game Developer 🎮',
+        aboutme: 'Creating immersive gaming experiences. I love every part of the pipeline — design, code, and shaders.',
+        learning: 'Shader programming, Procedural generation, Networking for games',
+        askme: 'Unity, Unreal Engine, C#, Game Design, Game Physics',
+        funfact: 'The bug is always a feature in disguise'
+    },
+    security: {
+        name: 'Your Name',
+        tagline: 'Cybersecurity Engineer & Ethical Hacker 🔐',
+        aboutme: 'Finding vulnerabilities before the bad guys do. I break things professionally so products get more secure.',
+        learning: 'Reverse engineering, Red teaming, Cloud security',
+        askme: 'Penetration testing, CTF, OSINT, Network security',
+        funfact: 'I read T&Cs — and I\'ve found bugs in them'
+    },
+    student: {
+        name: 'Your Name',
+        tagline: 'CS Student & Aspiring Developer 🎓',
+        aboutme: 'Passionate computer science student exploring the world of software. Building projects to learn, learning to build better projects.',
+        learning: 'Data Structures, Algorithms, System Design',
+        askme: 'Python, JavaScript, DSA, Competitive programming',
+        funfact: 'I pull all-nighters debugging code I wrote that morning'
+    },
+    opensource: {
+        name: 'Your Name',
+        tagline: 'Open Source Contributor & Community Builder 🌍',
+        aboutme: 'Dedicated to building in the open. I contribute to projects I rely on and maintain a few of my own.',
+        learning: 'Large codebase navigation, OSS governance, Documentation',
+        askme: 'Git, Code reviews, Open source, Community building',
+        funfact: 'My PR descriptions are longer than some theses'
     },
     designer: {
-        name: 'UI/UX Designer',
-        tagline: 'Creative Designer 🎨',
-        aboutme: 'Designing beautiful user experiences.',
-        learning: 'Figma, Design Systems, Animation',
-        askme: 'UI Design, UX, Prototyping',
-        reachme: 'designer@example.com'
+        name: 'Your Name',
+        tagline: 'UI/UX Designer & Design Systems Architect 🎨',
+        aboutme: 'Designing experiences people love. I bridge the gap between beautiful visuals and functional interfaces.',
+        learning: 'Motion design, Design tokens, Accessibility',
+        askme: 'Figma, UI Design, UX Research, Prototyping, Design Systems',
+        funfact: 'I kern type manually and I\'m proud of it'
     }
 };
 
@@ -641,6 +709,10 @@ function autoSave() {
             theme: state.theme,
             socialStyle: state.socialStyle,
             stats: state.stats,
+            hideBorder: state.hideBorder,
+            countPrivate: state.countPrivate,
+            wakatimeUsername: state.wakatimeUsername,
+            builtWithBadge: state.builtWithBadge,
             addons: state.addons,
             socials: state.socials,
             selectedTech: [...state.selectedTech]
@@ -664,14 +736,22 @@ function loadSavedData() {
                     if (el) el.value = data.state[key];
                 }
             });
+            const statsIdMap = { profile: 'profile_stats', topLang: 'top_lang', streak: 'streak', activityGraph: 'activity_graph' };
             Object.keys(data.state.stats || {}).forEach(key => {
-                const el = document.getElementById(key === 'profile' ? 'profile_stats' : key === 'topLang' ? 'top_lang' : 'streak');
+                const el = document.getElementById(statsIdMap[key]);
                 if (el) el.checked = data.state.stats[key];
             });
+            const hideBorderEl = document.getElementById('hide_border');
+            if (hideBorderEl) hideBorderEl.checked = !!data.state.hideBorder;
+            const countPrivateEl = document.getElementById('count_private');
+            if (countPrivateEl) countPrivateEl.checked = !!data.state.countPrivate;
+            const builtWithEl = document.getElementById('built_with_badge');
+            if (builtWithEl) builtWithEl.checked = !!data.state.builtWithBadge;
             Object.keys(data.state.socials || {}).forEach(key => {
                 const el = document.getElementById(key);
                 if (el) el.value = data.state.socials[key];
             });
+            renderTechStack();
         } catch (e) {
             console.error('Failed to load saved data');
         }
@@ -709,6 +789,145 @@ function setupSplitView() {
     }
 }
 
+// ===== GITHUB IMPORT =====
+async function importFromGitHub() {
+    const username = document.getElementById('github').value.trim() || state.github;
+    if (!username) { showNotification('Enter a GitHub username first', 'error'); return; }
+
+    const btn = document.getElementById('importGithubBtn');
+    if (btn) { btn.textContent = '...'; btn.disabled = true; }
+
+    try {
+        const res = await fetch(`https://api.github.com/users/${username}`);
+        if (!res.ok) throw new Error(res.status === 404 ? 'User not found' : 'GitHub API error');
+        const user = await res.json();
+
+        const fillField = (id, value) => {
+            if (!value) return;
+            state[id] = value;
+            const el = document.getElementById(id);
+            if (el) el.value = value;
+        };
+
+        fillField('name', user.name);
+        fillField('github', user.login);
+        fillField('aboutme', user.bio);
+
+        if (user.blog) {
+            const blog = user.blog.startsWith('http') ? user.blog : 'https://' + user.blog;
+            fillField('blog_url', blog);
+            fillField('projects_url', blog);
+        }
+
+        if (user.twitter_username) {
+            state.socials.twitter = user.twitter_username;
+            const el = document.getElementById('twitter');
+            if (el) el.value = user.twitter_username;
+        }
+
+        if (user.location && !state.tagline) {
+            fillField('tagline', `Developer from ${user.location} 📍`);
+        }
+
+        updateOutput();
+        updateProgress();
+        showNotification(`✓ Imported ${user.name || username}'s GitHub profile!`);
+    } catch (e) {
+        showNotification(e.message, 'error');
+    } finally {
+        if (btn) {
+            btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Import`;
+            btn.disabled = false;
+        }
+    }
+}
+
+function setupGitHubImport() {
+    const btn = document.getElementById('importGithubBtn');
+    if (btn) btn.addEventListener('click', importFromGitHub);
+}
+
+// ===== SHARE / PERMALINK =====
+function stateToBase64(data) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+}
+
+function base64ToState(b64) {
+    return JSON.parse(decodeURIComponent(escape(atob(b64))));
+}
+
+function getShareSnapshot() {
+    return {
+        name: state.name, tagline: state.tagline, aboutme: state.aboutme,
+        work_project: state.work_project, work_link: state.work_link,
+        collab_project: state.collab_project, collab_link: state.collab_link,
+        help_project: state.help_project, help_link: state.help_link,
+        learning: state.learning, askme: state.askme, reachme: state.reachme,
+        projects_url: state.projects_url, blog_url: state.blog_url,
+        resume_url: state.resume_url, funfact: state.funfact,
+        github: state.github, theme: state.theme, socialStyle: state.socialStyle,
+        stats: state.stats, hideBorder: state.hideBorder, countPrivate: state.countPrivate,
+        wakatimeUsername: state.wakatimeUsername, builtWithBadge: state.builtWithBadge,
+        addons: state.addons, socials: state.socials, selectedTech: [...state.selectedTech]
+    };
+}
+
+function applySnapshot(data) {
+    Object.assign(state, data);
+    state.selectedTech = data.selectedTech || [];
+
+    Object.keys(data).forEach(key => {
+        if (['selectedTech', 'stats', 'addons', 'socials', 'hideBorder', 'countPrivate', 'builtWithBadge'].includes(key)) return;
+        const el = document.getElementById(key);
+        if (el) el.value = data[key] || '';
+    });
+
+    const statsIdMap = { profile: 'profile_stats', topLang: 'top_lang', streak: 'streak', activityGraph: 'activity_graph' };
+    Object.keys(data.stats || {}).forEach(k => {
+        const el = document.getElementById(statsIdMap[k]);
+        if (el) el.checked = !!data.stats[k];
+    });
+    ['hide_border', 'count_private', 'built_with_badge'].forEach(id => {
+        const key = id.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+        const el = document.getElementById(id);
+        if (el) el.checked = !!data[key] || !!data[id];
+    });
+    Object.keys(data.socials || {}).forEach(k => {
+        const el = document.getElementById(k);
+        if (el) el.value = data.socials[k] || '';
+    });
+    renderTechStack();
+    updateOutput();
+    updateProgress();
+}
+
+function loadFromUrl() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const s = params.get('s');
+        if (!s) return false;
+        const data = base64ToState(s);
+        applySnapshot(data);
+        showNotification('📎 Shared README config loaded!');
+        return true;
+    } catch (e) { return false; }
+}
+
+function setupShare() {
+    const shareBtn = document.getElementById('shareBtn');
+    if (!shareBtn) return;
+    shareBtn.addEventListener('click', () => {
+        const snapshot = getShareSnapshot();
+        const encoded = stateToBase64(snapshot);
+        const url = `${window.location.origin}${window.location.pathname}?s=${encoded}`;
+        navigator.clipboard.writeText(url)
+            .then(() => showNotification('🔗 Share link copied to clipboard!'))
+            .catch(() => {
+                prompt('Copy this shareable link:', url);
+            });
+    });
+}
+
 // Initialize new features in setupEventListeners
 const originalSetupEventListeners = setupEventListeners;
 setupEventListeners = function() {
@@ -721,7 +940,10 @@ setupEventListeners = function() {
     setupTemplates();
     setupKeyboardShortcuts();
     setupSplitView();
-    loadSavedData();
+    setupGitHubImport();
+    setupShare();
+    // URL share state takes priority over localStorage
+    if (!loadFromUrl()) loadSavedData();
     updateProgress();
     const form = document.getElementById('readmeForm');
     if (form) {
