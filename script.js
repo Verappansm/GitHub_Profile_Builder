@@ -908,6 +908,8 @@ function loadFromUrl() {
         if (!s) return false;
         const data = base64ToState(s);
         applySnapshot(data);
+        // Strip ?s= from URL so bookmarking/refreshing uses localStorage instead
+        history.replaceState({}, '', window.location.pathname);
         showNotification('📎 Shared README config loaded!');
         return true;
     } catch (e) { return false; }
